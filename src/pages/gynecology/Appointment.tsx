@@ -1,11 +1,34 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Calendar, Clock, Info, MapPin, Phone, User, Mail, FileText, Check, X, CheckCircle, CalendarIcon } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Info,
+  MapPin,
+  Phone,
+  User,
+  Mail,
+  FileText,
+  Check,
+  X,
+  CheckCircle,
+  CalendarIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast, toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,68 +58,79 @@ const GynecologyAppointment = () => {
     reason: "",
     additionalInfo: "",
     age: "",
-    gender: ""
+    gender: "",
   });
   const [manualHolidays, setManualHolidays] = useState<Holiday[]>([]);
 
   useEffect(() => {
     const fetchManualHolidays = async () => {
       const { data, error } = await supabase
-        .from('holidays')
-        .select('date, name, doctor')
-        .eq('type', 'manual');
+        .from("holidays")
+        .select("date, name, doctor")
+        .eq("type", "manual");
 
       if (error) {
-        console.error('Error fetching manual holidays:', error);
+        console.error("Error fetching manual holidays:", error);
         return;
       }
 
-      setManualHolidays((data || []).map(holiday => ({
-        date: new Date(holiday.date),
-        reason: holiday.name,
-        doctor: holiday.doctor
-      })));
+      setManualHolidays(
+        (data || []).map((holiday) => ({
+          date: new Date(holiday.date),
+          reason: holiday.name,
+          doctor: holiday.doctor,
+        }))
+      );
     };
 
     fetchManualHolidays();
   }, []);
 
   const isManualHoliday = (date: Date) => {
-    return manualHolidays.some(holiday =>
-      holiday.date.getFullYear() === date.getFullYear() &&
-      holiday.date.getMonth() === date.getMonth() &&
-      holiday.date.getDate() === date.getDate() &&
-      (holiday.doctor === null || holiday.doctor === 'all' || holiday.doctor === 'gynecology')
+    return manualHolidays.some(
+      (holiday) =>
+        holiday.date.getFullYear() === date.getFullYear() &&
+        holiday.date.getMonth() === date.getMonth() &&
+        holiday.date.getDate() === date.getDate() &&
+        (holiday.doctor === null ||
+          holiday.doctor === "all" ||
+          holiday.doctor === "gynecology")
     );
   };
 
   const getHolidayReason = (date: Date) => {
-    const holiday = manualHolidays.find(holiday =>
-      holiday.date.getFullYear() === date.getFullYear() &&
-      holiday.date.getMonth() === date.getMonth() &&
-      holiday.date.getDate() === date.getDate() &&
-      (holiday.doctor === null || holiday.doctor === 'all' || holiday.doctor === 'gynecology')
+    const holiday = manualHolidays.find(
+      (holiday) =>
+        holiday.date.getFullYear() === date.getFullYear() &&
+        holiday.date.getMonth() === date.getMonth() &&
+        holiday.date.getDate() === date.getDate() &&
+        (holiday.doctor === null ||
+          holiday.doctor === "all" ||
+          holiday.doctor === "gynecology")
     );
     return holiday ? holiday.reason : "";
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
   const handleSelectChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate && isManualHoliday(selectedDate)) {
       const reason = getHolidayReason(selectedDate);
-      const doctorSpecific = manualHolidays.find(h =>
-        h.date.getFullYear() === selectedDate.getFullYear() &&
-        h.date.getMonth() === selectedDate.getMonth() &&
-        h.date.getDate() === selectedDate.getDate() &&
-        h.doctor === 'gynecology'
+      const doctorSpecific = manualHolidays.find(
+        (h) =>
+          h.date.getFullYear() === selectedDate.getFullYear() &&
+          h.date.getMonth() === selectedDate.getMonth() &&
+          h.date.getDate() === selectedDate.getDate() &&
+          h.doctor === "gynecology"
       );
 
       toast({
@@ -151,7 +185,7 @@ const GynecologyAppointment = () => {
 
       // First, store appointment in database
       const { data: appointmentData, error: dbError } = await supabase
-        .from('appointments')
+        .from("appointments")
         .insert({
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -166,7 +200,7 @@ const GynecologyAppointment = () => {
           doctor: "Nisha Bhatnagar",
           status: "pending",
           age: ageNumber,
-          gender: formData.gender || null
+          gender: formData.gender || null,
         })
         .select();
 
@@ -182,23 +216,26 @@ const GynecologyAppointment = () => {
       });
 
       // Call the edge function to send notification emails
-      const { data, error } = await supabase.functions.invoke("send-appointment", {
-        body: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          date: formattedDate,
-          time: formData.time,
-          reason: formData.reason,
-          additionalInfo: formData.additionalInfo,
-          specialty: "gynecology",
-          clinic: "Eyefem Gynecology Clinic",
-          doctor: "Nisha Bhatnagar",
-          age: ageNumber,
-          gender: formData.gender || null
+      const { data, error } = await supabase.functions.invoke(
+        "send-appointment",
+        {
+          body: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            date: formattedDate,
+            time: formData.time,
+            reason: formData.reason,
+            additionalInfo: formData.additionalInfo,
+            specialty: "gynecology",
+            clinic: "Eyefem Gynecology Clinic",
+            doctor: "Nisha Bhatnagar",
+            age: ageNumber,
+            gender: formData.gender || null,
+          },
         }
-      });
+      );
 
       if (error) {
         console.error("Error invoking edge function:", error);
@@ -213,12 +250,12 @@ const GynecologyAppointment = () => {
         description: "We'll contact you shortly to confirm your appointment.",
         variant: "default",
       });
-
     } catch (error) {
       console.error("Error submitting appointment:", error);
       toast({
         title: "Error Submitting Appointment",
-        description: "There was a problem submitting your appointment request. Please try again.",
+        description:
+          "There was a problem submitting your appointment request. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -226,12 +263,18 @@ const GynecologyAppointment = () => {
     }
   };
 
-  const { manualHolidays: manualHolidaysFromHook, holidayForDate, loading: holidayLoading } = useManualHolidays('gynecology');
+  const {
+    manualHolidays: manualHolidaysFromHook,
+    holidayForDate,
+    loading: holidayLoading,
+  } = useManualHolidays("gynecology");
 
   const isManualHolidayNew = (date: Date) => !!holidayForDate(date);
-  const getHolidayReasonNew = (date: Date) => holidayForDate(date)?.reason || "";
+  const getHolidayReasonNew = (date: Date) =>
+    holidayForDate(date)?.reason || "";
 
-  const selectedDateHolidayReason = date && isManualHolidayNew(date) ? getHolidayReasonNew(date) : "";
+  const selectedDateHolidayReason =
+    date && isManualHolidayNew(date) ? getHolidayReasonNew(date) : "";
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -252,8 +295,8 @@ const GynecologyAppointment = () => {
               Book Your Appointment
             </h1>
             <p className="text-xl mb-8 text-white/90">
-              Schedule a consultation with Dr. Nisha Bhatnagar and take the first
-              step towards better health and fertility.
+              Schedule a consultation with Dr. Nisha Bhatnagar and take the
+              first step towards better health and fertility.
             </p>
           </div>
         </div>
@@ -263,7 +306,9 @@ const GynecologyAppointment = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col items-center justify-center">
             <div data-aos="fade-right" className="max-w-xl w-full">
-              <h2 className="text-3xl font-bold mb-8 text-gynecology text-center">Contact Information</h2>
+              <h2 className="text-3xl font-bold mb-8 text-gynecology text-center">
+                Contact Information
+              </h2>
 
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
@@ -271,8 +316,9 @@ const GynecologyAppointment = () => {
                   <div>
                     <h3 className="text-xl font-bold mb-1">Aveya IVF Center</h3>
                     <p className="text-gray-600">
-                      B-8, Vishal Enclave, Rajouri Garden<br />
-                      New Delhi, Delhi 110008
+                      B-8, Vishal Enclave, Rajouri Garden
+                      <br />
+                      New Delhi - 110008
                     </p>
                   </div>
                 </div>
@@ -280,10 +326,11 @@ const GynecologyAppointment = () => {
                 <div className="flex items-start gap-4">
                   <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-eyecare shrink-0 mt-1" />
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold mb-1">Clinic EyeFem</h3>
+                    <h3 className="text-lg sm:text-xl font-bold mb-1">
+                      Clinic EyeFem
+                    </h3>
                     <p className="text-gray-600 text-sm sm:text-base">
-                      25/11, East Patel Nagar, New Delhi<br />
-                      Delhi 110008
+                      25/11, East Patel Nagar, New Delhi - 110008
                     </p>
                   </div>
                 </div>
@@ -302,8 +349,14 @@ const GynecologyAppointment = () => {
                   <Clock className="h-6 w-6 text-gynecology shrink-0 mt-1" />
                   <div>
                     <h3 className="text-xl font-bold mb-1">Working Hours</h3>
-                    <p className="text-gray-600">Monday to Saturday: 10:00 AM - 6:00 PM <br/>at Ayeva IFV Centrer</p><br/>
-                    <p className="text-gray-600">Available at clinic EyeFem on appointment basis</p>
+                    <p className="text-gray-600">
+                      Monday to Saturday: 10:00 AM - 6:00 PM <br />
+                      at Ayeva IFV Centrer
+                    </p>
+                    <br />
+                    <p className="text-gray-600">
+                      Available at clinic EyeFem on appointment basis
+                    </p>
                     <p className="text-gray-600">Sunday: Closed</p>
                   </div>
                 </div>
@@ -311,13 +364,13 @@ const GynecologyAppointment = () => {
 
               <div className="mt-6 sm:mt-8 md:mt-12">
                 <div className="rounded-xl overflow-hidden h-[250px] sm:h-[300px] md:h-[350px] shadow-lg hover:shadow-xl transition-shadow border-2 border-gynecology/20 hover:border-gynecology/50">
-                  <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2913.1278202603517!2d77.11587957455815!3d28.653009483152122!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d033ff3c00021%3A0xc5281c1d1d03bc16!2sAveya%20IVF%20%26%20Fertility%20Center%20-%20Rajouri%20Garden%2C%20Delhi!5e0!3m2!1sen!2sus!4v1749888083099!5m2!1sen!2sus" 
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2913.1278202603517!2d77.11587957455815!3d28.653009483152122!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d033ff3c00021%3A0xc5281c1d1d03bc16!2sAveya%20IVF%20%26%20Fertility%20Center%20-%20Rajouri%20Garden%2C%20Delhi!5e0!3m2!1sen!2sus!4v1749888083099!5m2!1sen!2sus"
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
-                    allowFullScreen 
-                    loading="lazy" 
+                    allowFullScreen
+                    loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                     title="Aveya IVF & Fertility Center Location"
                     className="w-full h-full object-cover"
@@ -547,15 +600,22 @@ const GynecologyAppointment = () => {
       </section>
 
       <section className="py-16 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-6xl text-center" data-aos="fade-up">
+        <div
+          className="container mx-auto max-w-6xl text-center"
+          data-aos="fade-up"
+        >
           <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gynecology">
             Insurance Information
           </h2>
-          
+
           <div className="mb-8">
             <GyneInsuranceProviders variant="gynecology" />
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mt-4">
-            Please Note: We accept most major insurance plans. To avoid any inconvenience, we kindly recommend contacting our office in advance to confirm your insurance coverage prior to your appointment. Please note that insurance is only applicable for surgical procedures and not for clinical visits or consultations.
+              Please Note: We accept most major insurance plans. To avoid any
+              inconvenience, we kindly recommend contacting our office in
+              advance to confirm your insurance coverage prior to your
+              appointment. Please note that insurance is only applicable for
+              surgical procedures and not for clinical visits or consultations.
             </p>
           </div>
         </div>
